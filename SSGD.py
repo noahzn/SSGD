@@ -2,14 +2,14 @@
 SSGD: SUPERPIXELS USING THE SHORTEST GRADIENT DISTANCE
 Ning Zhang and Lin Zhang∗
 School of Software Engineering, Tongji University, Shanghai, China
+
+This code is made publicly for research use only.
+It may be modified and redistributed under the terms of the GNU General Public License.
 """
 
 import cv2
 import numpy as np
-import time
 from skimage.graph import route_through_array
-import scipy.io as sio
-import os
 import warnings
 
 warnings.simplefilter("error")
@@ -45,7 +45,8 @@ class SSGD:
 
     def _bilateral_filter(self):
         """
-        bilateral filtering operation in none-edged texture-rich regions
+        bilateral filtering operation in none-edged texture-rich regions.
+        The adaptive bilateral filter is recommended.
         :return:
         """
         for i in range(self.step_of_superpixel, int(self.width_of_img - self.step_of_superpixel / 2),
@@ -71,7 +72,7 @@ class SSGD:
 
     def _edge_detection(self):
         """
-        calculate the gradient map
+        We can use the simple Sobel operator.
         :return:
         """
         img = np.float32(self.img)
@@ -111,7 +112,7 @@ class SSGD:
                 new_centers.append(center)
 
         self.center_counts = np.zeros(len(new_centers))
-        self.new_centers = np.array(new_centers)  # (n, 5)
+        self.new_centers = np.array(new_centers)  # (n, 5) LABXY
 
     def find_lowest_gradient2(self, old_center):
         """
@@ -168,8 +169,32 @@ class SSGD:
 
                 neighborhood_of_gradient = self.edge[ylow:yhigh, xlow:xhigh]
 
-                # calculate the shortest gradient distance, we get a cost-matrix
-                # notice: route_through_array function has been modified to return the whole cost-matrix
+
+                """
+                the shortest gradient distance
+                notice: skimage.graph.route_through_array function has been modified to return the whole cost-matrix
+
+                We will give you an example. In a 2S x 2S window, the cluster center C and other points can be shown as
+                below. Then we get the GM map and treat it as a undirect-weighted graph, the cost between any two
+                adjacent point can be calculated by their GM average. Next, we can get the minimum-cost path from C to
+                any point in this graph. For example, from c to p, the cost is 1+1+1+0+0.5+1=4.5, i.e., the shortest
+                gradient distance.
+
+
+                o————o————o————o————o         1—3.5—6——6——6——5——4—2.5—1            1—————6—————6—————4—————1(p)
+                |    |    |    |    |         |2    |5    |7    |5    |1           |     |     |     |     ↑
+                o————o————o————o————o         3—3.5—4——6——8——7——6—3.5—1            3—————4—————8—————6—————1
+                |    |    |    |    |         |5    |5    |5    |7    |0.5         |     |     |     |     ↑
+                o————o————C————o————o   ==>   7—6.5—6——4——2——5——8——4——0     ==>    7—————6———2(C)————8—————0
+                |    |    |    |    |         |3.5  |6    |1    |5    |0           |     |     ↓     |     ↑
+                o————o————o————o————o         0——3——6——3——0——1——2——1——0            0—————6—————0————>2————>0
+                |    |    |    |    |         |2    |6    |4.5  |4    |2.5         |     |     |     |     |
+                o————o————o————o————o         4——2——0—4.5—9—7.5—6—5.5—5            4—————0—————9—————6—————5
+
+                    2S x 2S window                   cost-matrix                   the shortest gradient path
+
+                """
+
                 distance_of_space_g_temp = route_through_array(neighborhood_of_gradient,
                                                                [int(self.new_centers[j][4] - ylow),
                                                                 int(self.new_centers[j][3] - xlow)], [0, 0],
@@ -254,7 +279,7 @@ class SSGD:
                                 count += 1
                     c += 1
 
-                if count <= int(lims) >> 4:
+                if count <= int(lims) >> 5:
                     for c in range(count):
                         self.new_clusters[elements[c]] = adjacent_label
                     label -= 1
