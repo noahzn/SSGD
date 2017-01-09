@@ -17,5 +17,3 @@ Installation instructions:
 
     Notice: route_through_array function used in this code has been modified to return the whole cost matrix.
 
-![image](https://github.com/noahzn/SSGD/raw/master/results/1.bmp)
-![image](https://github.com/noahzn/SSGD/raw/master/results/2.bmp)
